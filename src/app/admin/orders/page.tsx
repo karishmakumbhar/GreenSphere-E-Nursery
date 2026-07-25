@@ -1,111 +1,233 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { ShoppingBag, Truck, Calendar, DollarSign, ArrowUpRight } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useApp } from "@/context/AppContext";
+import { Search, Eye, RefreshCw, Package, Truck, CheckCircle, XCircle } from "lucide-react";
 
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { orders, updateOrderStatus, setOrders } = useApp() as any;
+  const [dbOrders, setDbOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
-
-  const fetchOrders = async () => {
+  const fetchDbOrders = async () => {
     try {
       const res = await fetch('/api/admin/orders');
       if (res.ok) {
         const data = await res.json();
-        setOrders(data);
+        setDbOrders(data);
       }
     } catch (e) {
       console.error(e);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleStatusChange = async (orderId: string, e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newStatus = e.target.value;
-    
-    // Optimistic update
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+  useEffect(() => {
+    fetchDbOrders();
+  }, []);
 
+  const handleUpdateStatus = async (orderId: string, newStatus: string) => {
+    // Update local context
+    updateOrderStatus(orderId, newStatus);
+    
+    // Update DB
     try {
       await fetch('/api/admin/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, status: newStatus })
       });
+      fetchDbOrders();
     } catch (e) {
-      alert("Failed to update status");
-      fetchOrders(); // Revert on failure
+      console.error("Error updating DB order status", e);
     }
   };
 
-  if (isLoading) {
-    return <div className="py-20 text-center text-xs text-txt-muted">Loading Admin Analytics...</div>;
+  const handleGenerateId = (order: any) => {
+    // Replace old ID with new GS-2026 format if requested
+    const newId = "GS-2026-" + Math.floor(1000 + Math.random() * 9000);
+    // Ideally this would be an API call to update the ID, but since ID is primary key in DB it's complex.
+    // Let's assume this is just for display or it updates the local context for old orders
+    alert(`New ID generated: ${newId} (Simulation)`);
+  };
+
+  // Merge AppContext orders with DB orders
+  const allOrdersMap = new Map();
+  orders.forEach((o: any) => allOrdersMap.set(o.id, o));
+  
+  dbOrders.forEach((o: any) => {
+    if (allOrdersMap.has(o.id)) {
+      // Merge DB specific fields into context order
+      const existing = allOrdersMap.get(o.id);
+      allOrdersMap.set(o.id, { ...existing, ...o, items: o.items?.length ? o.items : existing.items });
+    } else {
+      allOrdersMap.set(o.id, o);
+    }
+  });
+
+  const allOrders = Array.from(allOrdersMap.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const filteredOrders = useMemo(() => {
+    if (!searchQuery) return allOrders;
+    return allOrders.filter(o => 
+      o.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (o.address?.fullName && o.address.fullName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (o.address?.email && o.address.email.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  }, [allOrders, searchQuery]);
+
+  if (loading) {
+    return <div className="text-center py-10 text-xs text-txt-muted animate-pulse">Fetching Logistics Data...</div>;
   }
 
   return (
-    <div className="space-y-6 text-left">
-      <div className="pb-4 border-b border-border-subtle/50">
-        <h1 className="text-2xl font-extrabold text-txt-white tracking-tight">Shipment Logistics Administration</h1>
-        <p className="text-xs text-txt-muted font-mono uppercase tracking-wider text-accent-neon">Shipment routing & carrier statuses</p>
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-extrabold text-txt-white tracking-tight">Order Management</h2>
+          <p className="text-xs text-txt-muted mt-1">Review and process shipments globally.</p>
+        </div>
       </div>
 
-      <div className="rounded-2xl border border-border-subtle bg-bg-sec-dark/50 glass-card p-5 overflow-hidden">
-        {orders.length === 0 ? (
-          <div className="text-center py-16 text-xs text-txt-muted italic">No logistics transactions filed.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left border-collapse font-mono">
-              <thead>
-                <tr className="border-b border-border-subtle text-txt-muted uppercase text-[9px] tracking-wider">
-                  <th className="py-2.5 pl-3">Registry ID</th>
-                  <th className="py-2.5">Date</th>
-                  <th className="py-2.5">Cultivator Client</th>
-                  <th className="py-2.5">Destination Node</th>
-                  <th className="py-2.5 text-right">Acquisitions Total</th>
-                  <th className="py-2.5 text-right">Carrier Route Status</th>
+      <div className="rounded-2xl border border-border-subtle bg-bg-sec-dark/50 glass-card p-4">
+        <div className="relative mb-6">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-txt-muted" />
+          <input
+            type="text"
+            placeholder="Search by Order ID, Name, or Email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-bg-deep border border-border-subtle rounded-xl pl-10 pr-4 py-2.5 text-xs text-txt-white focus:border-accent-neon outline-none transition-all"
+          />
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs whitespace-nowrap">
+            <thead>
+              <tr className="border-b border-border-subtle/50 text-txt-muted uppercase tracking-wider font-bold">
+                <th className="pb-3 pl-2">Order ID / Date</th>
+                <th className="pb-3">Customer</th>
+                <th className="pb-3">Items</th>
+                <th className="pb-3">Amount</th>
+                <th className="pb-3">Status</th>
+                <th className="pb-3 text-right pr-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border-subtle/50">
+              {filteredOrders.map((order) => (
+                <tr key={order.id} className="hover:bg-bg-sec-light/30 transition-colors">
+                  <td className="py-3 pl-2">
+                    <p className="font-bold text-txt-white font-mono">{order.id}</p>
+                    <p className="text-[10px] text-txt-muted">{new Date(order.date).toLocaleDateString()}</p>
+                  </td>
+                  <td className="py-3">
+                    <p className="font-bold text-txt-white">{order.address?.fullName || "Guest User"}</p>
+                    <p className="text-[10px] text-txt-muted">{order.address?.email}</p>
+                    <p className="text-[10px] text-txt-muted">{order.address?.phone}</p>
+                  </td>
+                  <td className="py-3 text-txt-muted">
+                    <p>{order.items?.length || 0} plants</p>
+                  </td>
+                  <td className="py-3 font-mono text-accent-neon font-bold">
+                    ₹{order.total?.toLocaleString('en-IN')}
+                  </td>
+                  <td className="py-3">
+                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold 
+                      ${order.status === 'Delivered' ? 'bg-green-500/10 text-green-400' : 
+                        order.status === 'Ready To Ship' ? 'bg-orange-500/10 text-orange-400' :
+                        order.status === 'Shipped' ? 'bg-blue-500/10 text-blue-400' :
+                        order.status === 'Cancelled' ? 'bg-red-500/10 text-red-400' :
+                        'bg-yellow-500/10 text-yellow-400'}`}>
+                      {order.status || 'Pending'}
+                    </span>
+                  </td>
+                  <td className="py-3 pr-2 text-right">
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => setSelectedOrder(order)} title="View Details" className="p-1.5 rounded-lg bg-bg-deep hover:bg-bg-sec-light text-txt-white border border-border-subtle transition-colors">
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => handleGenerateId(order)} title="Generate GS Order ID" className="p-1.5 rounded-lg bg-bg-deep hover:bg-bg-sec-light text-purple-400 border border-border-subtle transition-colors">
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => handleUpdateStatus(order.id, 'Ready To Ship')} title="Ready To Ship" className="p-1.5 rounded-lg bg-bg-deep hover:bg-bg-sec-light text-orange-400 border border-border-subtle transition-colors">
+                        <Package className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button onClick={() => handleUpdateStatus(order.id, 'Cancelled')} title="Cancel Order" className="p-1.5 rounded-lg bg-bg-deep hover:bg-bg-sec-light text-red-400 border border-border-subtle transition-colors">
+                        <XCircle className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-border-subtle/50 text-txt-gray">
-                {orders.map((order) => (
-                  <tr key={order.id} className="hover:bg-bg-sec-dark/40">
-                    <td className="py-4 pl-3 font-bold text-txt-white">{order.id}</td>
-                    <td className="py-4">{new Date(order.date).toLocaleDateString('en-GB')}</td>
-                    <td className="py-4">
-                      <div>
-                        <span className="font-bold block text-txt-white">{order.address.fullName}</span>
-                        <span className="text-[10px] text-txt-muted block">{order.address.email}</span>
-                      </div>
-                    </td>
-                    <td className="py-4 truncate max-w-[150px]" title={order.address.street}>
-                      {order.address.city}, {order.address.zipCode}
-                    </td>
-                    <td className="py-4 text-right text-accent-neon font-bold">
-                      ₹{order.total.toLocaleString("en-IN")}
-                    </td>
-                    <td className="py-4 text-right">
-                      <select
-                        value={order.status}
-                        onChange={(e) => handleStatusChange(order.id, e)}
-                        className="px-2.5 py-1.5 rounded-lg border border-border-subtle bg-bg-deep text-[10px] text-txt-gray font-semibold focus:outline-none focus:border-accent-neon cursor-pointer"
-                      >
-                        <option value="Processing">Processing</option>
-                        <option value="Shipped">Shipped</option>
-                        <option value="Delivered">Delivered</option>
-                        <option value="Cancelled">Cancelled / Refunded</option>
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              ))}
+              {filteredOrders.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-txt-muted text-xs">No orders found.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {/* Order Details Modal */}
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-bg-sec-dark border border-border-subtle rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl p-6 relative">
+            <button onClick={() => setSelectedOrder(null)} className="absolute top-4 right-4 text-txt-muted hover:text-white p-1 bg-bg-deep rounded-full border border-border-subtle">
+              <XCircle className="w-5 h-5" />
+            </button>
+            
+            <h3 className="text-xl font-bold text-txt-white mb-6 border-b border-border-subtle/50 pb-4">Order Details: <span className="text-accent-neon font-mono">{selectedOrder.id}</span></h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs mb-6">
+              <div>
+                <p className="font-bold text-txt-muted uppercase tracking-wider mb-2">Customer Info</p>
+                <p className="text-txt-white font-bold">{selectedOrder.address?.fullName || "N/A"}</p>
+                <p className="text-txt-muted">{selectedOrder.address?.email || "N/A"}</p>
+                <p className="text-txt-muted">{selectedOrder.address?.phone || "N/A"}</p>
+              </div>
+              <div>
+                <p className="font-bold text-txt-muted uppercase tracking-wider mb-2">Shipping Address</p>
+                <p className="text-txt-white">{selectedOrder.address?.street || "N/A"}</p>
+                <p className="text-txt-white">{selectedOrder.address?.city || "N/A"}, {selectedOrder.address?.zipCode || "N/A"}</p>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <p className="font-bold text-txt-muted uppercase tracking-wider mb-3">Order Items</p>
+              <div className="bg-bg-deep rounded-xl border border-border-subtle overflow-hidden">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-bg-sec-light/50 border-b border-border-subtle text-txt-muted">
+                    <tr>
+                      <th className="p-3">Product</th>
+                      <th className="p-3">Qty</th>
+                      <th className="p-3 text-right">Price</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-subtle/50">
+                    {selectedOrder.items?.map((item: any, i: number) => (
+                      <tr key={i}>
+                        <td className="p-3 font-medium text-txt-white">{item.product_name || item.product?.name}</td>
+                        <td className="p-3 text-txt-muted">{item.quantity}</td>
+                        <td className="p-3 text-right text-accent-neon">₹{(item.price || item.product?.price)?.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center pt-4 border-t border-border-subtle/50">
+              <p className="font-bold text-txt-muted uppercase tracking-wider">Total Amount</p>
+              <p className="text-xl font-extrabold text-accent-neon">₹{selectedOrder.total?.toLocaleString('en-IN')}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

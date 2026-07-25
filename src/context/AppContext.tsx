@@ -661,7 +661,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const placeOrder = async (address: Order["address"], paymentMethod: string, orderTotal?: number): Promise<Order> => {
-    const orderId = "gs_ord_" + Math.floor(100000 + Math.random() * 900000);
+    const lastSeq = parseInt(localStorage.getItem("gs_last_order_seq") || "0", 10);
+    const nextSeq = lastSeq + 1;
+    localStorage.setItem("gs_last_order_seq", nextSeq.toString());
+    const paddedSeq = nextSeq.toString().padStart(4, "0");
+    const orderId = `GS-2026-${paddedSeq}`;
+    
     const subtotal = cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
     const finalTotal = orderTotal !== undefined ? orderTotal : (subtotal + (subtotal > 15000 ? 0 : 1500));
     

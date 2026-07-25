@@ -32,6 +32,8 @@ export default function Navbar() {
     ...(user?.role === "admin" ? [{ name: "Admin", href: "/admin" }] : [])
   ];
 
+  if (pathname.startsWith("/admin")) return null;
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 px-4 md:px-8 py-4">
       <nav className="max-w-7xl mx-auto glass-nav rounded-2xl px-6 py-4 flex items-center justify-between">

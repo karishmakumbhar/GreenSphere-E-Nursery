@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { MessageSquare, X, Send, Bot, Sparkles, AlertCircle, Droplet, Sun, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { useApp } from "@/context/AppContext";
+import { usePathname } from "next/navigation";
 
 interface ChatMessage {
   sender: "user" | "bot";
@@ -14,6 +15,7 @@ interface ChatMessage {
 
 export default function AiBot() {
   const { products } = useApp();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {

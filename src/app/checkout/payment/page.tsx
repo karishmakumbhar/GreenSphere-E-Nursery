@@ -47,9 +47,12 @@ export default function CheckoutPaymentPage() {
     if (!address || cart.length === 0) return;
     setIsProcessing(true);
 
-    if (paymentMethod === "cod") {
-      try {
-        const orderId = "ORD_COD_" + Date.now();
+    try {
+      // 1. Generate Order via Context (which creates GS-2026-XXXX format, adds plants to Garden, clears Cart)
+      const newOrder = await placeOrder(address, paymentMethod, totalCost);
+      const orderId = newOrder.id;
+
+      if (paymentMethod === "cod") {
         const verifyRes = await fetch("/api/verify-payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -63,53 +66,51 @@ export default function CheckoutPaymentPage() {
         });
 
         if (verifyRes.ok) {
-          const { orderId: dbOrderId } = await verifyRes.json();
-          localStorage.setItem("gs_latest_order_id", dbOrderId);
+          localStorage.setItem("gs_latest_order_id", orderId);
           localStorage.removeItem("gs_temp_address");
           router.push("/checkout/confirmation");
         } else {
           alert("Failed to confirm COD order.");
         }
-      } catch (e) {
-        alert("An error occurred during checkout.");
-      } finally {
         setIsProcessing(false);
+        return;
       }
-      return;
-    }
 
-    // Simulated Online Payment Flow (Mocking Razorpay)
-    setTimeout(async () => {
-      try {
-        const orderId = "ORD_MOCK_" + Date.now();
-        const verifyRes = await fetch("/api/verify-payment", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            razorpay_order_id: orderId,
-            razorpay_payment_id: "pay_mock_" + Date.now(),
-            razorpay_signature: "mock_signature_bypass",
-            orderData: { address, paymentMethod, totalCost, cart, user: null },
-            mockMode: true
-          }),
-        });
+      // Simulated Online Payment Flow (Mocking Razorpay)
+      setTimeout(async () => {
+        try {
+          const verifyRes = await fetch("/api/verify-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              razorpay_order_id: orderId,
+              razorpay_payment_id: "pay_mock_" + Date.now(),
+              razorpay_signature: "mock_signature_bypass",
+              orderData: { address, paymentMethod, totalCost, cart, user: null },
+              mockMode: true
+            }),
+          });
 
-        if (verifyRes.ok) {
-          const { orderId: dbOrderId } = await verifyRes.json();
-          localStorage.setItem("gs_latest_order_id", dbOrderId);
-          localStorage.removeItem("gs_temp_address");
-          router.push("/checkout/confirmation");
-        } else {
-          const verifyData = await verifyRes.json();
-          alert("Mock Payment verification failed. " + verifyData.error);
+          if (verifyRes.ok) {
+            localStorage.setItem("gs_latest_order_id", orderId);
+            localStorage.removeItem("gs_temp_address");
+            router.push("/checkout/confirmation");
+          } else {
+            const verifyData = await verifyRes.json();
+            alert("Mock Payment verification failed. " + verifyData.error);
+          }
+        } catch (e) {
+          console.error(e);
+          alert("An error occurred during simulated online checkout.");
+        } finally {
+          setIsProcessing(false);
         }
-      } catch (e) {
-        console.error(e);
-        alert("An error occurred during simulated online checkout.");
-      } finally {
-        setIsProcessing(false);
-      }
-    }, 1500);
+      }, 1500);
+      
+    } catch (e) {
+      alert("An error occurred during checkout.");
+      setIsProcessing(false);
+    }
   };
 
   if (!address) {

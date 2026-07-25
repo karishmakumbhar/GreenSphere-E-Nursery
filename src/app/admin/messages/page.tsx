@@ -110,19 +110,19 @@ export default function AdminMessagesPage() {
                 <div 
                   key={msg.id}
                   onClick={() => setSelectedMessage(msg)}
-                  className={\`p-3 rounded-xl border transition-all cursor-pointer \${
+                  className={`p-3 rounded-xl border transition-all cursor-pointer ${
                     selectedMessage?.id === msg.id 
                       ? 'bg-accent-neon/10 border-accent-neon/30' 
                       : 'bg-bg-deep border-border-subtle hover:border-accent-neon/50'
-                  }\`}
+                  }`}
                 >
                   <div className="flex justify-between items-start mb-1">
                     <h4 className="font-semibold text-sm text-txt-white truncate pr-2">{msg.name}</h4>
-                    <span className={\`text-[10px] px-2 py-0.5 rounded-full font-bold \${
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                       msg.status === 'New' ? 'bg-blue-500/20 text-blue-400' :
                       msg.status === 'Replied' ? 'bg-accent-green/20 text-accent-neon' :
                       'bg-gray-500/20 text-gray-400'
-                    }\`}>
+                    }`}>
                       {msg.status}
                     </span>
                   </div>

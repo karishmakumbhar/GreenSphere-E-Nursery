@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loginType, setLoginType] = useState<"user" | "admin">("user");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -29,9 +30,14 @@ export default function LoginPage() {
 
       if (result.success) {
         if (result.user) {
+          if (loginType === "admin" && result.user.role !== "admin") {
+            setError("Access Denied: Admin credentials required.");
+            setLoading(false);
+            return;
+          }
           localStorage.setItem("gs_user", JSON.stringify(result.user));
         }
-        window.location.href = "/dashboard";
+        window.location.href = loginType === "admin" ? "/admin/dashboard" : "/dashboard";
       } else {
         if (result.unverified) {
           router.push(`/verify-otp?email=${encodeURIComponent(email)}`);
@@ -73,8 +79,36 @@ export default function LoginPage() {
           )}
           
           <form onSubmit={handleSubmit} className="space-y-4">
+            
+            <div className="flex gap-4 mb-4">
+              <button
+                type="button"
+                onClick={() => setLoginType("user")}
+                className={`flex-1 py-2.5 rounded-full text-[13px] font-bold transition-all ${
+                  loginType === "user"
+                    ? "bg-[#36534B] text-white shadow-md"
+                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                }`}
+              >
+                User
+              </button>
+              <button
+                type="button"
+                onClick={() => setLoginType("admin")}
+                className={`flex-1 py-2.5 rounded-full text-[13px] font-bold transition-all ${
+                  loginType === "admin"
+                    ? "bg-[#36534B] text-white shadow-md"
+                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                }`}
+              >
+                Admin
+              </button>
+            </div>
+
             <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-gray-500 ml-4 uppercase tracking-wider">Login, email or phone number</label>
+              <label className="text-[11px] font-semibold text-gray-500 ml-4 uppercase tracking-wider">
+                {loginType === "admin" ? "Admin Email or ID" : "Login, email or phone number"}
+              </label>
               <input 
                 type="email" 
                 required 

@@ -4,10 +4,14 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { Leaf, ArrowRight, Terminal, Send, Camera, Globe } from "lucide-react";
 import { useApp } from "@/context/AppContext";
+import { usePathname } from "next/navigation";
 
 export default function Footer() {
   const { addNotification } = useApp();
   const [email, setEmail] = useState("");
+  const pathname = usePathname();
+
+  if (pathname.startsWith("/admin")) return null;
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
