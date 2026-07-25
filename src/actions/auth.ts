@@ -23,14 +23,15 @@ export async function loginUser(formData: FormData) {
 
   try {
     const db = await getDb();
-    const user = await db.get('SELECT * FROM users WHERE email = ?', [email]);
+    // Allow login by either email or phone
+    const user = await db.get('SELECT * FROM users WHERE email = ? OR phone = ?', [email, email]);
 
     if (!user) {
       return { success: false, error: 'Invalid credentials.' };
     }
 
     if (user.is_verified === 0) {
-      return { success: false, error: 'Please verify your email before logging in.', unverified: true };
+      return { success: false, error: 'Please verify your account before logging in.', unverified: true, email: user.email };
     }
 
     const isMatch = await bcrypt.compare(password, user.password);

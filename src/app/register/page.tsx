@@ -14,7 +14,7 @@ export default function RegisterPage() {
     email: "",
     password: "",
     confirmPassword: "",
-    phone: "",
+    phone: "+91",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -118,9 +118,11 @@ export default function RegisterPage() {
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-gray-500 ml-4 uppercase tracking-wider">Phone number</label>
               <input 
-                type="text" 
+                type="tel" 
                 name="phone"
                 required 
+                pattern="^\+91[0-9]{10}$"
+                title="Phone number must start with +91 followed by exactly 10 digits"
                 value={formData.phone} 
                 onChange={handleChange} 
                 className="w-full bg-white border border-gray-300 text-gray-900 px-4 py-2.5 rounded-full focus:border-[#36534B] focus:ring-1 focus:ring-[#36534B] outline-none transition-all text-[14px] shadow-sm" 

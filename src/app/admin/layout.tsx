@@ -73,7 +73,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
 
-        <nav className="flex flex-col gap-1">
+        <nav className="flex flex-row md:flex-col gap-2 md:gap-1 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
           {adminLinks.map((link) => {
             const Icon = link.icon;
             const isActive = pathname === link.href;
@@ -81,7 +81,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+                className={`flex items-center justify-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold rounded-xl transition-all cursor-pointer whitespace-nowrap flex-shrink-0 ${
                   isActive
                     ? "bg-accent-neon text-bg-deep shadow-[0_0_12px_rgba(163,255,18,0.15)]"
                     : "text-txt-muted hover:text-txt-white hover:bg-bg-sec-light"
@@ -94,10 +94,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        <div className="border-t border-border-subtle/50 pt-4 mt-4 space-y-2">
+        <div className="border-t border-border-subtle/50 pt-4 mt-2 md:mt-4 flex flex-row md:flex-col gap-2 overflow-x-auto scrollbar-hide">
           <Link
             href="/"
-            className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold text-txt-muted hover:text-accent-neon rounded-xl transition-colors cursor-pointer"
+            className="flex items-center justify-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold text-txt-muted hover:text-accent-neon rounded-xl transition-colors cursor-pointer flex-1 whitespace-nowrap"
           >
             <ArrowLeft className="w-4 h-4 flex-shrink-0" />
             <span>Return to Boutique</span>
@@ -108,7 +108,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               localStorage.removeItem("gs_user");
               window.location.href = "/login";
             }}
-            className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold text-red-400 hover:text-red-300 rounded-xl transition-colors cursor-pointer"
+            className="flex items-center justify-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold text-red-400 hover:text-red-300 rounded-xl transition-colors cursor-pointer flex-1 whitespace-nowrap"
           >
             <LogOut className="w-4 h-4 flex-shrink-0" />
             <span>Logout</span>

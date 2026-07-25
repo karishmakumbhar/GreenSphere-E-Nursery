@@ -9,7 +9,7 @@ import { loginUser } from "@/actions/auth";
 export default function LoginPage() {
   const router = useRouter();
 
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loginType, setLoginType] = useState<"user" | "admin">("user");
@@ -23,7 +23,7 @@ export default function LoginPage() {
 
     try {
       const formData = new FormData();
-      formData.append("email", email);
+      formData.append("email", identifier);
       formData.append("password", password);
 
       const result = await loginUser(formData);
@@ -40,7 +40,8 @@ export default function LoginPage() {
         window.location.href = loginType === "admin" ? "/admin/dashboard" : "/dashboard";
       } else {
         if (result.unverified) {
-          router.push(`/verify-otp?email=${encodeURIComponent(email)}`);
+          // If result.email is returned, use it. Otherwise fallback to identifier.
+          router.push(`/verify-otp?email=${encodeURIComponent(result.email || identifier)}`);
         } else {
           setError(result.error || "Invalid credentials.");
         }
@@ -110,10 +111,10 @@ export default function LoginPage() {
                 {loginType === "admin" ? "Admin Email or ID" : "Login, email or phone number"}
               </label>
               <input 
-                type="email" 
+                type="text" 
                 required 
-                value={email} 
-                onChange={(e) => setEmail(e.target.value)} 
+                value={identifier} 
+                onChange={(e) => setIdentifier(e.target.value)} 
                 className="w-full bg-white border border-gray-300 text-gray-900 px-5 py-3.5 rounded-full focus:border-[#36534B] focus:ring-1 focus:ring-[#36534B] outline-none transition-all text-[14px] shadow-sm" 
               />
             </div>
