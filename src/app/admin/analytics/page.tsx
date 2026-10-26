@@ -53,7 +53,7 @@ export default function AnalyticsDashboardPage() {
     const counts: Record<string, number> = {};
     orders.filter(o => o.status === "Delivered").forEach(order => {
       if (order.items && Array.isArray(order.items)) {
-        order.items.forEach(item => {
+        order.items.forEach((item: any) => {
           const name = item.product_name || item.product?.name || "Unknown";
           counts[name] = (counts[name] || 0) + (item.quantity || 1);
         });
